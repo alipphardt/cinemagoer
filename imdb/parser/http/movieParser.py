@@ -41,7 +41,7 @@ from imdb.Movie import Movie
 from imdb.Person import Person
 from imdb.utils import KIND_MAP, _Container
 
-from .piculet import Path, Rule, Rules, preprocessors, transformers
+from .piculet import Path, Rule, Rules, preprocessors, transformers, reducers
 from .utils import DOMParserBase, analyze_imdbid, build_movie, build_person
 
 # Dictionary used to convert some section's names.
@@ -327,19 +327,19 @@ class DOMHTMLMovieParser(DOMParserBase):
         Rule(
             key='cast',
             extractor=Rules(
-                foreach='//table[@class="cast_list"]//tr',
+                foreach='//section[contains(@class, "ipc-page-section")][.//span[normalize-space(text()) ="Cast"]]//ul[contains(@class, "full-credits-page-list")]/li',
                 rules=[
                     Rule(
                         key='person',
-                        extractor=Path('.//text()')
+                        extractor=Path('.//div[contains(@class,"ipc-metadata-list-summary-item__tc")]/div/div[1]//text()')
                     ),
                     Rule(
                         key='link',
-                        extractor=Path('./td[2]/a/@href')
+                        extractor=Path('.//div[contains(@class,"ipc-metadata-list-summary-item__tc")]/div/div[1]//@href')
                     ),
                     Rule(
                         key='roleID',
-                        extractor=Path('./td[4]//div[@class="_imdbpyrole"]/@roleid')
+                        extractor=Path('.//div[contains(@class,"ipc-metadata-list-summary-item__tc")]/div/div[2]//@href')
                     )
                 ],
                 transform=lambda x: build_person(
@@ -384,7 +384,7 @@ class DOMHTMLMovieParser(DOMParserBase):
         Rule(
             key='genres',
             extractor=Path(
-                foreach='//td[starts-with(text(), "Genre")]/..//li/a',
+                foreach='//li[@data-testid="storyline-genres"][.//span[starts-with(text(),"Genre")]]//ul/li/a',
                 path='./text()'
             )
         ),
@@ -527,15 +527,15 @@ class DOMHTMLMovieParser(DOMParserBase):
         Rule(
             key='thin director',
             extractor=Rules(
-                foreach='//div[starts-with(normalize-space(text()), "Director")]/ul/li[1]/a',
+                foreach='//section[contains(@class,"ipc-page-section")][.//span[starts-with(normalize-space(text()),"Director")]]//ul/li',
                 rules=[
                     Rule(
                         key='name',
-                        extractor=Path('./text()')
+                        extractor=Path('.//a/text()', reduce=reducers.first)
                     ),
                     Rule(
                         key='link',
-                        extractor=Path('./@href')
+                        extractor=Path('.//a/@href', reduce=reducers.first)
                     )
                 ],
                 transform=lambda x: build_person(
